@@ -2,12 +2,49 @@ import { useState } from 'react'
 import hansLogo from '../../assets/hans-logo.png'
 import './Login.css'
 
-function Login() {
+const API_BASE_URL = 'http://localhost:5656'
+
+export interface AuthUser {
+  id: string
+  fullName: string
+  email: string
+  role: string
+}
+
+interface LoginProps {
+  onLoginSuccess: (token: string, user: AuthUser) => void
+}
+
+function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/web/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const json = await res.json()
+
+      if (!res.ok || !json.success) {
+        setError(json.message || 'Login failed. Please try again.')
+        return
+      }
+
+      onLoginSuccess(json.data.token, json.data.user)
+    } catch {
+      setError('Could not reach the server. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -19,7 +56,7 @@ function Login() {
           <div className="login-shape shape-3" />
 
           <div className="login-tabs">
-            <span className="login-tab login-tab-active">LOGIN</span>
+            <span className="login-tab login-tab-active">ADMIN</span>
           </div>
         </div>
 
@@ -68,12 +105,14 @@ function Login() {
               />
             </div>
 
+            {error && <p className="login-error">{error}</p>}
+
             <div className="login-actions">
               <a href="#" className="login-forgot">
                 Forgot Password?
               </a>
-              <button type="submit" className="login-submit">
-                LOGIN
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? 'Logging in...' : 'LOGIN'}
               </button>
             </div>
           </form>

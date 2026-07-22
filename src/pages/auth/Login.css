@@ -193,4 +193,15 @@
     outline: 2px solid var(--brand-navy);
     outline-offset: 2px;
   }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--brand-red);
+  text-align: left;
+  margin: -8px 0 16px;
 }
