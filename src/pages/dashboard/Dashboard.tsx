@@ -1,10 +1,15 @@
 import { useState, type ReactElement } from 'react'
 import type { AuthUser } from '../auth/Login'
+import Products from '../products/Products'
+import Collections from '../products/Collections'
+import Inventory from '../products/Inventory'
+import Customers from '../customers/Customers'
 import hansLogo from '../../assets/hans-logo.png'
 import './Dashboard.css'
 
 interface DashboardProps {
   user: AuthUser
+  token: string
   onLogout: () => void
 }
 
@@ -138,15 +143,6 @@ function IconChevron() {
   )
 }
 
-function IconSearch() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8.5" cy="8.5" r="5" />
-      <path d="M17 17l-4.5-4.5" />
-    </svg>
-  )
-}
-
 function IconBell() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -159,7 +155,7 @@ function IconBell() {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', icon: <IconHome /> },
   { label: 'Orders', icon: <IconOrders />, badge: 2, children: ['Drafts', 'Shipping Labels', 'Abandoned Checkouts'] },
-  { label: 'Products', icon: <IconProducts />, children: ['Collections', 'Inventory'] },
+  { label: 'Products', icon: <IconProducts />, children: ['Collections', 'Inventory', 'Purchase orders', 'Transfers', 'Gift cards'] },
   { label: 'Customers', icon: <IconCustomers />, children: ['Segments'] },
   { label: 'Marketing', icon: <IconMarketing />, children: ['Automations'] },
   { label: 'Discounts', icon: <IconDiscounts /> },
@@ -213,7 +209,7 @@ function SessionsChart() {
   )
 }
 
-function Dashboard({ user, onLogout }: DashboardProps) {
+function Dashboard({ user, token, onLogout }: DashboardProps) {
   const [activeNav, setActiveNav] = useState('Home')
   const [activeChild, setActiveChild] = useState<string | null>(null)
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
@@ -248,6 +244,10 @@ function Dashboard({ user, onLogout }: DashboardProps) {
   }
 
   const isHome = activeNav === 'Home' && !activeChild
+  const isProductsRoot = activeNav === 'Products' && !activeChild
+  const isCollectionsRoot = activeNav === 'Products' && activeChild === 'Collections'
+  const isInventoryRoot = activeNav === 'Products' && activeChild === 'Inventory'
+  const isCustomersRoot = activeNav === 'Customers' && !activeChild
 
   return (
     <div id="dashboard">
@@ -332,11 +332,6 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
       <div className="dash-main">
         <header className="dash-topbar">
-          <div className="dash-search">
-            <IconSearch />
-            <input type="text" placeholder="Search" />
-          </div>
-
           <div className="dash-topbar-actions">
             <button type="button" className="dash-icon-btn" aria-label="Notifications">
               <IconBell />
@@ -365,7 +360,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
           </div>
         </header>
 
-        <main className="dash-content">
+        <main className={`dash-content${isProductsRoot || isCollectionsRoot || isInventoryRoot || isCustomersRoot ? ' dash-content-wide' : ''}`}>
           {isHome ? (
             <>
               <div className="dash-content-header">
@@ -424,6 +419,14 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                 </div>
               </div>
             </>
+          ) : isProductsRoot ? (
+            <Products token={token} />
+          ) : isCollectionsRoot ? (
+            <Collections token={token} />
+          ) : isInventoryRoot ? (
+            <Inventory token={token} />
+          ) : isCustomersRoot ? (
+            <Customers token={token} />
           ) : (
             <div className="dash-placeholder">
               <h1>{activeChild ?? activeNav}</h1>

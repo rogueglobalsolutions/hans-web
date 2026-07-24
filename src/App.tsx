@@ -28,7 +28,7 @@ function App() {
   }
 
   if (auth) {
-    return <Dashboard user={auth.user} onLogout={handleLogout} />
+    return <Dashboard user={auth.user} token={auth.token} onLogout={handleLogout} />
   }
 
   return <Login onLoginSuccess={handleLoginSuccess} />
