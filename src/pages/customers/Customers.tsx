@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { API_BASE_URL, IconSearch, authHeaders } from '../products/shared'
+import { API_BASE_URL, IconSearch, Pagination, authHeaders, usePagedSearch } from '../products/shared'
 import '../products/Products.css'
 
 interface CustomersProps {
@@ -15,22 +15,29 @@ interface AdminCustomer {
   location: string | null
 }
 
+const PAGE_LIMIT = 20
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
 }
 
 function Customers({ token }: CustomersProps) {
   const [customers, setCustomers] = useState<AdminCustomer[]>([])
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
+  const { search, setSearch, debouncedSearch, page, setPage } = usePagedSearch()
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError('')
 
-    fetch(`${API_BASE_URL}/api/admin/commerce/customers?limit=50&role=customers`, {
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_LIMIT), role: 'customers' })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+
+    fetch(`${API_BASE_URL}/api/admin/commerce/customers?${params.toString()}`, {
       headers: authHeaders(token),
     })
       .then(async (res) => {
@@ -38,7 +45,11 @@ function Customers({ token }: CustomersProps) {
         if (!res.ok || !json.success) {
           throw new Error(json.message || 'Failed to load customers')
         }
-        if (!cancelled) setCustomers(json.data.items ?? [])
+        if (!cancelled) {
+          setCustomers(json.data.items ?? [])
+          setTotal(json.data.total ?? 0)
+          setHasMore(json.data.hasMore ?? false)
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load customers')
@@ -50,22 +61,10 @@ function Customers({ token }: CustomersProps) {
     return () => {
       cancelled = true
     }
-  }, [token])
-
-  const query = search.trim().toLowerCase()
-  const filtered = query
-    ? customers.filter((c) => c.name.toLowerCase().includes(query) || c.email.toLowerCase().includes(query))
-    : customers
+  }, [token, page, debouncedSearch])
 
   return (
     <>
-      <div className="dash-content-header">
-        <h1>Customers</h1>
-        <div className="dash-filters">
-          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add customer</button>
-        </div>
-      </div>
-
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -77,13 +76,14 @@ function Customers({ token }: CustomersProps) {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add customer</button>
         </div>
 
         {loading ? (
           <div className="products-empty">Loading customers&hellip;</div>
         ) : error ? (
           <div className="products-empty products-error">{error}</div>
-        ) : filtered.length === 0 ? (
+        ) : customers.length === 0 ? (
           <div className="products-empty">No customers found.</div>
         ) : (
           <div className="products-table-wrap">
@@ -98,7 +98,7 @@ function Customers({ token }: CustomersProps) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((customer) => (
+                {customers.map((customer) => (
                   <tr key={customer.id}>
                     <td>{customer.name}</td>
                     <td>{customer.email}</td>
@@ -111,6 +111,15 @@ function Customers({ token }: CustomersProps) {
             </table>
           </div>
         )}
+
+        <Pagination
+          page={page}
+          total={total}
+          limit={PAGE_LIMIT}
+          hasMore={hasMore}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       </div>
     </>
   )

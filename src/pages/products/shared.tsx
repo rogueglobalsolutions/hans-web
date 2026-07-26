@@ -1,4 +1,4 @@
-import type { SyntheticEvent } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 
 export const API_BASE_URL = 'http://localhost:5656'
 
@@ -100,5 +100,72 @@ export function IconArrowLeft() {
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 4 6 10l6 6" />
     </svg>
+  )
+}
+
+export function IconClose() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M5 5l10 10M15 5 5 15" />
+    </svg>
+  )
+}
+
+export function IconTrash() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h12M8 6V4h4v2M6 6l.6 10a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L14 6" />
+    </svg>
+  )
+}
+
+export function usePagedSearch(delayMs = 350) {
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim())
+      setPage(1)
+    }, delayMs)
+    return () => clearTimeout(timer)
+  }, [search, delayMs])
+
+  return { search, setSearch, debouncedSearch, page, setPage }
+}
+
+export function Pagination({
+  page,
+  total,
+  limit,
+  hasMore,
+  onPrev,
+  onNext,
+}: {
+  page: number
+  total: number
+  limit: number
+  hasMore: boolean
+  onPrev: () => void
+  onNext: () => void
+}) {
+  if (total === 0) return null
+  const totalPages = Math.max(Math.ceil(total / limit), 1)
+
+  return (
+    <div className="products-pagination">
+      <span className="products-pagination-label">
+        {total} total &middot; page {page} of {totalPages}
+      </span>
+      <div className="products-pagination-controls">
+        <button type="button" className="dash-filter-btn" onClick={onPrev} disabled={page <= 1}>
+          Previous
+        </button>
+        <button type="button" className="dash-filter-btn" onClick={onNext} disabled={!hasMore}>
+          Next
+        </button>
+      </div>
+    </div>
   )
 }

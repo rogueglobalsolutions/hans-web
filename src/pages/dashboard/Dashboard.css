@@ -10,7 +10,7 @@
   --ink-muted: #6b7280;
   --surface: #f6f6f7;
   --border: #e3e4e7;
-  --good: #0f8a3f;
+  --good: #0c7536;
 
   display: flex;
   width: 100%;
@@ -20,6 +20,32 @@
   font-size: 14px;
   text-align: left;
   overflow: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #c7cad1 transparent;
+}
+
+#dashboard ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#dashboard ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#dashboard ::-webkit-scrollbar-thumb {
+  background: #c7cad1;
+  border-radius: 999px;
+}
+
+#dashboard ::-webkit-scrollbar-thumb:hover {
+  background: #aab0bb;
+}
+
+#dashboard h1,
+#dashboard h2,
+#dashboard h3 {
+  color: var(--ink);
 }
 
 #dashboard input[type='number'] {
@@ -175,7 +201,6 @@
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 #fff;
   }
 }
 
@@ -336,7 +361,8 @@
 }
 
 .dash-content-wide {
-  max-width: 1600px;
+  max-width: none;
+  padding: 5px 5px 48px 5px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -347,7 +373,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 
   h1 {
     font-size: 24px;
@@ -366,6 +392,7 @@
 .dash-filter-btn {
   font: inherit;
   font-size: 13px;
+  font-weight: 500;
   padding: 7px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -373,18 +400,25 @@
   color: var(--ink);
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--surface);
+  }
+
+  &:disabled {
+    color: var(--ink-muted);
+    cursor: default;
+    opacity: 0.6;
   }
 }
 
 .dash-filter-btn.dash-filter-btn-primary {
-  border-color: var(--brand-navy);
-  background: var(--brand-navy);
-  color: #fff;
+  border-color: #ffb647;
+  background: #ffb647;
+  color: var(--ink);
 
   &:hover:not(:disabled) {
-    background: #0f2244;
+    background: #f5a730;
+    border-color: #f5a730;
   }
 
   &:disabled {

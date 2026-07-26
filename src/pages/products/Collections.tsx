@@ -52,13 +52,6 @@ function Collections({ token }: CollectionsProps) {
 
   return (
     <>
-      <div className="dash-content-header">
-        <h1>Collections</h1>
-        <div className="dash-filters">
-          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add collection</button>
-        </div>
-      </div>
-
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -70,6 +63,7 @@ function Collections({ token }: CollectionsProps) {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add collection</button>
         </div>
 
         {loading ? (

@@ -4,10 +4,12 @@ import {
   API_BASE_URL,
   IconProductPlaceholder,
   IconSearch,
+  Pagination,
   VISIBILITY_STATUS_LABEL,
   authHeaders,
   hideBrokenImage,
   resolveImageUrl,
+  usePagedSearch,
   type AdminProduct,
 } from './shared'
 import './Products.css'
@@ -16,19 +18,26 @@ interface ProductsProps {
   token: string
 }
 
+const PAGE_LIMIT = 20
+
 function Products({ token }: ProductsProps) {
   const [products, setProducts] = useState<AdminProduct[]>([])
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { search, setSearch, debouncedSearch, page, setPage } = usePagedSearch()
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError('')
 
-    fetch(`${API_BASE_URL}/api/admin/commerce/products?limit=50`, {
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_LIMIT) })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+
+    fetch(`${API_BASE_URL}/api/admin/commerce/products?${params.toString()}`, {
       headers: authHeaders(token),
     })
       .then(async (res) => {
@@ -36,7 +45,11 @@ function Products({ token }: ProductsProps) {
         if (!res.ok || !json.success) {
           throw new Error(json.message || 'Failed to load products')
         }
-        if (!cancelled) setProducts(json.data.items ?? [])
+        if (!cancelled) {
+          setProducts(json.data.items ?? [])
+          setTotal(json.data.total ?? 0)
+          setHasMore(json.data.hasMore ?? false)
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load products')
@@ -48,7 +61,7 @@ function Products({ token }: ProductsProps) {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, page, debouncedSearch])
 
   if (selectedId) {
     return (
@@ -63,18 +76,8 @@ function Products({ token }: ProductsProps) {
     )
   }
 
-  const query = search.trim().toLowerCase()
-  const filtered = query ? products.filter((p) => p.name.toLowerCase().includes(query)) : products
-
   return (
     <>
-      <div className="dash-content-header">
-        <h1>Products</h1>
-        <div className="dash-filters">
-          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add product</button>
-        </div>
-      </div>
-
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -86,13 +89,14 @@ function Products({ token }: ProductsProps) {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <button type="button" className="dash-filter-btn dash-filter-btn-primary">Add product</button>
         </div>
 
         {loading ? (
           <div className="products-empty">Loading products&hellip;</div>
         ) : error ? (
           <div className="products-empty products-error">{error}</div>
-        ) : filtered.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="products-empty">No products found.</div>
         ) : (
           <div className="products-table-wrap">
@@ -107,7 +111,7 @@ function Products({ token }: ProductsProps) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((product) => {
+                {products.map((product) => {
                   const image = resolveImageUrl(product.imageUrl)
                   return (
                     <tr key={product.id} className="products-row-clickable" onClick={() => setSelectedId(product.id)}>
@@ -134,6 +138,15 @@ function Products({ token }: ProductsProps) {
             </table>
           </div>
         )}
+
+        <Pagination
+          page={page}
+          total={total}
+          limit={PAGE_LIMIT}
+          hasMore={hasMore}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       </div>
     </>
   )

@@ -1,9 +1,14 @@
-import { useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { AuthUser } from '../auth/Login'
 import Products from '../products/Products'
 import Collections from '../products/Collections'
 import Inventory from '../products/Inventory'
 import Customers from '../customers/Customers'
+import Segments from '../customers/Segments'
+import TrainingParticipants from '../customers/TrainingParticipants'
+import ContestDetail from '../customers/ContestDetail'
+import Discounts from '../discounts/Discounts'
 import hansLogo from '../../assets/hans-logo.png'
 import './Dashboard.css'
 
@@ -13,11 +18,17 @@ interface DashboardProps {
   onLogout: () => void
 }
 
+interface NavChild {
+  label: string
+  path: string
+}
+
 interface NavItem {
   label: string
+  path: string
   icon: ReactElement
   badge?: number
-  children?: string[]
+  children?: NavChild[]
 }
 
 function IconHome() {
@@ -153,16 +164,47 @@ function IconBell() {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', icon: <IconHome /> },
-  { label: 'Orders', icon: <IconOrders />, badge: 2, children: ['Drafts', 'Shipping Labels', 'Abandoned Checkouts'] },
-  { label: 'Products', icon: <IconProducts />, children: ['Collections', 'Inventory', 'Purchase orders', 'Transfers', 'Gift cards'] },
-  { label: 'Customers', icon: <IconCustomers />, children: ['Segments'] },
-  { label: 'Marketing', icon: <IconMarketing />, children: ['Automations'] },
-  { label: 'Discounts', icon: <IconDiscounts /> },
-  { label: 'Content', icon: <IconContent /> },
-  { label: 'Markets', icon: <IconMarkets /> },
-  { label: 'Finance', icon: <IconFinance /> },
-  { label: 'Analytics', icon: <IconAnalytics /> },
+  { label: 'Home', path: '/', icon: <IconHome /> },
+  {
+    label: 'Orders',
+    path: '/orders',
+    icon: <IconOrders />,
+    badge: 2,
+    children: [
+      { label: 'Drafts', path: '/orders/drafts' },
+      { label: 'Shipping Labels', path: '/orders/shipping-labels' },
+      { label: 'Abandoned Checkouts', path: '/orders/abandoned-checkouts' },
+    ],
+  },
+  {
+    label: 'Products',
+    path: '/products',
+    icon: <IconProducts />,
+    children: [
+      { label: 'Collections', path: '/products/collections' },
+      { label: 'Inventory', path: '/products/inventory' },
+      { label: 'Purchase orders', path: '/products/purchase-orders' },
+      { label: 'Transfers', path: '/products/transfers' },
+      { label: 'Gift cards', path: '/products/gift-cards' },
+    ],
+  },
+  {
+    label: 'Customers',
+    path: '/customers',
+    icon: <IconCustomers />,
+    children: [{ label: 'Segments', path: '/customers/segments' }],
+  },
+  {
+    label: 'Marketing',
+    path: '/marketing',
+    icon: <IconMarketing />,
+    children: [{ label: 'Automations', path: '/marketing/automations' }],
+  },
+  { label: 'Discounts', path: '/discounts', icon: <IconDiscounts /> },
+  { label: 'Content', path: '/content', icon: <IconContent /> },
+  { label: 'Markets', path: '/markets', icon: <IconMarkets /> },
+  { label: 'Finance', path: '/finance', icon: <IconFinance /> },
+  { label: 'Analytics', path: '/analytics', icon: <IconAnalytics /> },
 ]
 
 const SESSIONS_CURRENT = [30, 45, 40, 55, 90, 130, 95, 70, 55, 50, 65, 100, 150, 115, 80, 70, 65, 95, 190, 140, 155, 210, 130, 105]
@@ -209,11 +251,121 @@ function SessionsChart() {
   )
 }
 
+const WIDE_CONTENT_PATHS = new Set([
+  '/products',
+  '/products/collections',
+  '/products/inventory',
+  '/customers',
+  '/customers/segments',
+  '/customers/segments/contest',
+  '/discounts',
+])
+
+function isWideContentPath(pathname: string) {
+  if (WIDE_CONTENT_PATHS.has(pathname)) return true
+  if (pathname.startsWith('/customers/segments/contest/')) return false
+  return pathname.startsWith('/customers/segments/')
+}
+
+function findActiveItem(pathname: string) {
+  return NAV_ITEMS.find((item) => item.path !== '/' && (pathname === item.path || pathname.startsWith(`${item.path}/`)))
+}
+
+function HomeContent() {
+  return (
+    <>
+      <div className="dash-content-header">
+        <h1>Home</h1>
+        <div className="dash-filters">
+          <button type="button" className="dash-filter-btn">Last 30 days</button>
+          <button type="button" className="dash-filter-btn">All channels</button>
+          <span className="dash-live">
+            <span className="dash-live-dot" />
+            0 live visitors
+          </span>
+        </div>
+      </div>
+
+      <div className="dash-stats-card">
+        <div className="dash-stats-row">
+          <div className="dash-stat">
+            <p className="dash-stat-label">Sessions</p>
+            <p className="dash-stat-value">
+              851 <span className="dash-stat-delta up">&#9650; 36%</span>
+            </p>
+          </div>
+          <div className="dash-stat">
+            <p className="dash-stat-label">Total sales</p>
+            <p className="dash-stat-value">AED 5,910</p>
+          </div>
+          <div className="dash-stat">
+            <p className="dash-stat-label">Orders</p>
+            <p className="dash-stat-value">3</p>
+          </div>
+          <div className="dash-stat">
+            <p className="dash-stat-label">Conversion rate</p>
+            <p className="dash-stat-value">0.35%</p>
+          </div>
+        </div>
+
+        <SessionsChart />
+      </div>
+
+      <div className="dash-tasks">
+        <div className="dash-task-card">
+          <div className="dash-task-copy">
+            <p className="dash-task-progress">1 of 4 tasks complete</p>
+            <h3>Improve your conversion rate</h3>
+            <p>Increase the percentage of visitors who purchase something from your store.</p>
+          </div>
+          <button type="button" className="dash-task-cta">Resume guide</button>
+        </div>
+
+        <div className="dash-task-card">
+          <div className="dash-task-copy">
+            <h3>Get your first 10 sales</h3>
+            <p>Consider the opportunities below to get more visitors to your website and start making sales.</p>
+          </div>
+          <button type="button" className="dash-task-cta">View tasks</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function PlaceholderContent() {
+  const location = useLocation()
+  const activeItem = findActiveItem(location.pathname)
+  const activeChild = activeItem?.children?.find((child) => child.path === location.pathname)
+  const title = activeChild?.label ?? activeItem?.label ?? 'Not found'
+
+  return (
+    <div className="dash-placeholder">
+      <h1>{title}</h1>
+      <p>This section is coming soon.</p>
+    </div>
+  )
+}
+
 function Dashboard({ user, token, onLogout }: DashboardProps) {
-  const [activeNav, setActiveNav] = useState('Home')
-  const [activeChild, setActiveChild] = useState<string | null>(null)
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
+  const location = useLocation()
+  const navigate = useNavigate()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const activeItem = useMemo(() => findActiveItem(location.pathname), [location.pathname])
+  const activeChild = useMemo(
+    () =>
+      activeItem?.children?.find(
+        (child) => location.pathname === child.path || location.pathname.startsWith(`${child.path}/`),
+      ),
+    [activeItem, location.pathname],
+  )
+  const isWideContent = isWideContentPath(location.pathname)
+
+  const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
+    const current = findActiveItem(location.pathname)
+    return current?.children ? new Set([current.label]) : new Set()
+  })
 
   const initials = user.fullName
     .split(' ')
@@ -223,8 +375,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
     .toUpperCase()
 
   const handleNavClick = (item: NavItem) => {
-    setActiveNav(item.label)
-    setActiveChild(null)
+    navigate(item.path)
     if (item.children) {
       setOpenMenus((open) => {
         const next = new Set(open)
@@ -238,17 +389,6 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
     }
   }
 
-  const handleChildClick = (label: string, child: string) => {
-    setActiveNav(label)
-    setActiveChild(child)
-  }
-
-  const isHome = activeNav === 'Home' && !activeChild
-  const isProductsRoot = activeNav === 'Products' && !activeChild
-  const isCollectionsRoot = activeNav === 'Products' && activeChild === 'Collections'
-  const isInventoryRoot = activeNav === 'Products' && activeChild === 'Inventory'
-  const isCustomersRoot = activeNav === 'Customers' && !activeChild
-
   return (
     <div id="dashboard">
       <aside className="dash-sidebar">
@@ -261,7 +401,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
             <div key={item.label} className="dash-nav-group">
               <button
                 type="button"
-                className={`dash-nav-item ${activeNav === item.label ? 'active' : ''}`}
+                className={`dash-nav-item ${activeItem?.label === item.label && !activeChild ? 'active' : ''}`}
                 onClick={() => handleNavClick(item)}
               >
                 <span className="dash-nav-icon">{item.icon}</span>
@@ -278,12 +418,12 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
                 <div className="dash-subnav">
                   {item.children.map((child) => (
                     <button
-                      key={child}
+                      key={child.path}
                       type="button"
-                      className={`dash-subnav-item ${activeChild === child ? 'active' : ''}`}
-                      onClick={() => handleChildClick(item.label, child)}
+                      className={`dash-subnav-item ${location.pathname === child.path || location.pathname.startsWith(`${child.path}/`) ? 'active' : ''}`}
+                      onClick={() => navigate(child.path)}
                     >
-                      {child}
+                      {child.label}
                     </button>
                   ))}
                 </div>
@@ -296,8 +436,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
           <p className="dash-sidebar-heading">Sales channels</p>
           <button
             type="button"
-            className={`dash-nav-item ${activeNav === 'Online Store' ? 'active' : ''}`}
-            onClick={() => handleNavClick({ label: 'Online Store', icon: <IconStore /> })}
+            className={`dash-nav-item ${location.pathname === '/online-store' ? 'active' : ''}`}
+            onClick={() => navigate('/online-store')}
           >
             <span className="dash-nav-icon">
               <IconStore />
@@ -309,8 +449,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
         <div className="dash-sidebar-footer">
           <button
             type="button"
-            className={`dash-nav-item ${activeNav === 'Apps' ? 'active' : ''}`}
-            onClick={() => handleNavClick({ label: 'Apps', icon: <IconApps /> })}
+            className={`dash-nav-item ${location.pathname === '/apps' ? 'active' : ''}`}
+            onClick={() => navigate('/apps')}
           >
             <span className="dash-nav-icon">
               <IconApps />
@@ -319,8 +459,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
           </button>
           <button
             type="button"
-            className={`dash-nav-item ${activeNav === 'Settings' ? 'active' : ''}`}
-            onClick={() => handleNavClick({ label: 'Settings', icon: <IconSettings /> })}
+            className={`dash-nav-item ${location.pathname === '/settings' ? 'active' : ''}`}
+            onClick={() => navigate('/settings')}
           >
             <span className="dash-nav-icon">
               <IconSettings />
@@ -360,79 +500,20 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
           </div>
         </header>
 
-        <main className={`dash-content${isProductsRoot || isCollectionsRoot || isInventoryRoot || isCustomersRoot ? ' dash-content-wide' : ''}`}>
-          {isHome ? (
-            <>
-              <div className="dash-content-header">
-                <h1>Home</h1>
-                <div className="dash-filters">
-                  <button type="button" className="dash-filter-btn">Last 30 days</button>
-                  <button type="button" className="dash-filter-btn">All channels</button>
-                  <span className="dash-live">
-                    <span className="dash-live-dot" />
-                    0 live visitors
-                  </span>
-                </div>
-              </div>
-
-              <div className="dash-stats-card">
-                <div className="dash-stats-row">
-                  <div className="dash-stat">
-                    <p className="dash-stat-label">Sessions</p>
-                    <p className="dash-stat-value">
-                      851 <span className="dash-stat-delta up">&#9650; 36%</span>
-                    </p>
-                  </div>
-                  <div className="dash-stat">
-                    <p className="dash-stat-label">Total sales</p>
-                    <p className="dash-stat-value">AED 5,910</p>
-                  </div>
-                  <div className="dash-stat">
-                    <p className="dash-stat-label">Orders</p>
-                    <p className="dash-stat-value">3</p>
-                  </div>
-                  <div className="dash-stat">
-                    <p className="dash-stat-label">Conversion rate</p>
-                    <p className="dash-stat-value">0.35%</p>
-                  </div>
-                </div>
-
-                <SessionsChart />
-              </div>
-
-              <div className="dash-tasks">
-                <div className="dash-task-card">
-                  <div className="dash-task-copy">
-                    <p className="dash-task-progress">1 of 4 tasks complete</p>
-                    <h3>Improve your conversion rate</h3>
-                    <p>Increase the percentage of visitors who purchase something from your store.</p>
-                  </div>
-                  <button type="button" className="dash-task-cta">Resume guide</button>
-                </div>
-
-                <div className="dash-task-card">
-                  <div className="dash-task-copy">
-                    <h3>Get your first 10 sales</h3>
-                    <p>Consider the opportunities below to get more visitors to your website and start making sales.</p>
-                  </div>
-                  <button type="button" className="dash-task-cta">View tasks</button>
-                </div>
-              </div>
-            </>
-          ) : isProductsRoot ? (
-            <Products token={token} />
-          ) : isCollectionsRoot ? (
-            <Collections token={token} />
-          ) : isInventoryRoot ? (
-            <Inventory token={token} />
-          ) : isCustomersRoot ? (
-            <Customers token={token} />
-          ) : (
-            <div className="dash-placeholder">
-              <h1>{activeChild ?? activeNav}</h1>
-              <p>This section is coming soon.</p>
-            </div>
-          )}
+        <main className={`dash-content${isWideContent ? ' dash-content-wide' : ''}`}>
+          <Routes>
+            <Route path="/" element={<HomeContent />} />
+            <Route path="/products" element={<Products token={token} />} />
+            <Route path="/products/collections" element={<Collections token={token} />} />
+            <Route path="/products/inventory" element={<Inventory token={token} />} />
+            <Route path="/customers" element={<Customers token={token} />} />
+            <Route path="/customers/segments" element={<Segments token={token} />} />
+            <Route path="/customers/segments/contest" element={<Segments token={token} />} />
+            <Route path="/customers/segments/contest/:entryId" element={<ContestDetail token={token} />} />
+            <Route path="/customers/segments/:trainingId" element={<TrainingParticipants token={token} />} />
+            <Route path="/discounts" element={<Discounts token={token} />} />
+            <Route path="*" element={<PlaceholderContent />} />
+          </Routes>
         </main>
       </div>
     </div>

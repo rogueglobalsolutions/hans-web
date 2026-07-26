@@ -111,10 +111,6 @@ function Inventory({ token }: InventoryProps) {
 
   return (
     <>
-      <div className="dash-content-header">
-        <h1>Inventory</h1>
-      </div>
-
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
