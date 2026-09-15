@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { AuthUser } from '../auth/Login'
+import Orders from '../orders/Orders'
 import Products from '../products/Products'
 import Collections from '../products/Collections'
 import Inventory from '../products/Inventory'
@@ -183,8 +184,6 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: 'Collections', path: '/products/collections' },
       { label: 'Inventory', path: '/products/inventory' },
-      { label: 'Purchase orders', path: '/products/purchase-orders' },
-      { label: 'Transfers', path: '/products/transfers' },
       { label: 'Gift cards', path: '/products/gift-cards' },
     ],
   },
@@ -503,6 +502,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
         <main className={`dash-content${isWideContent ? ' dash-content-wide' : ''}`}>
           <Routes>
             <Route path="/" element={<HomeContent />} />
+            <Route path="/orders" element={<Orders token={token} />} />
             <Route path="/products" element={<Products token={token} />} />
             <Route path="/products/collections" element={<Collections token={token} />} />
             <Route path="/products/inventory" element={<Inventory token={token} />} />
