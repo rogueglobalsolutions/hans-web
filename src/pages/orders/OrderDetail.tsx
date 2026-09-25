@@ -234,6 +234,34 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
     runAction('ups-label', () => postJson(`/api/admin/commerce/orders/${id}/shipping-labels/ups`))
   }
 
+  const handleViewLabel = async (labelUrl: string) => {
+    const path = labelUrl.replace(/^\/+/, '')
+    if (!/^uploads\/shipping-labels\/[A-Za-z0-9._-]+$/.test(path)) {
+      setActionError('This shipping label cannot be opened.')
+      return
+    }
+    const preview = window.open('', '_blank')
+    if (!preview) {
+      setActionError('Allow pop-ups to view the shipping label.')
+      return
+    }
+    preview.opener = null
+    setActionLoading('view-label')
+    setActionError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/${path}`, { headers: authHeaders(token) })
+      if (!response.ok) throw new Error('Could not load the shipping label.')
+      const objectUrl = URL.createObjectURL(await response.blob())
+      preview.location.href = objectUrl
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5 * 60 * 1000)
+    } catch (error) {
+      preview.close()
+      setActionError(error instanceof Error ? error.message : 'Could not load the shipping label.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   if (loading) {
     return (
       <>
@@ -412,13 +440,14 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
               <dt>Label</dt>
               <dd>
                 {latestLabel.labelUrl ? (
-                  <a
-                    href={`${API_BASE_URL}/${latestLabel.labelUrl.replace(/^\/+/, '')}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    className="orders-label-link"
+                    disabled={actionLoading === 'view-label'}
+                    onClick={() => handleViewLabel(latestLabel.labelUrl!)}
                   >
-                    View / print label
-                  </a>
+                    {actionLoading === 'view-label' ? 'Opening label...' : 'View / print label'}
+                  </button>
                 ) : (
                   '—'
                 )}

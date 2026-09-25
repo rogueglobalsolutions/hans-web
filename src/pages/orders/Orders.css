@@ -102,6 +102,21 @@
   }
 }
 
+.orders-label-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.orders-label-link:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .orders-address-line {
   margin: 0 0 2px;
   font-size: 13px;
