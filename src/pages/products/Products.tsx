@@ -50,7 +50,6 @@ interface ProductFormState {
   usedWith: string
   fdaCleared: boolean
   securePackaging: boolean
-  groundShippingOnly: boolean
 }
 
 const EMPTY_FORM: ProductFormState = {
@@ -72,7 +71,6 @@ const EMPTY_FORM: ProductFormState = {
   usedWith: '',
   fdaCleared: false,
   securePackaging: false,
-  groundShippingOnly: false,
 }
 
 function CreateProductDialog({
@@ -131,7 +129,6 @@ function CreateProductDialog({
       if (form.usedWith.trim()) formData.append('usedWith', form.usedWith.trim())
       formData.append('fdaCleared', String(form.fdaCleared))
       formData.append('securePackaging', String(form.securePackaging))
-      formData.append('groundShippingOnly', String(form.groundShippingOnly))
       if (imageFile) formData.append('image', imageFile)
 
       const validVariants = variants.filter((v) => v.label.trim())
@@ -356,14 +353,6 @@ function CreateProductDialog({
                 onChange={(e) => setForm((f) => ({ ...f, securePackaging: e.target.checked }))}
               />
               Secure packaging
-            </label>
-            <label className="dialog-checkbox">
-              <input
-                type="checkbox"
-                checked={form.groundShippingOnly}
-                onChange={(e) => setForm((f) => ({ ...f, groundShippingOnly: e.target.checked }))}
-              />
-              Ground shipping only
             </label>
           </div>
 
