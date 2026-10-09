@@ -171,6 +171,9 @@ function ProductDetail({ id, token, onBack, onSaved }: ProductDetailProps) {
   }
 
   const image = resolveImageUrl(product.imageUrl)
+  const stockLevel = Math.max(Number(stockInput) || 0, 0)
+  const threshold = product.lowStockThreshold ?? 5
+  const gaugeMax = Math.max(threshold * 4, stockLevel, 20)
 
   return (
     <>
@@ -259,12 +262,31 @@ function ProductDetail({ id, token, onBack, onSaved }: ProductDetailProps) {
             </select>
           </div>
 
-          <div className="products-card product-detail-section">
-            <label className="product-detail-label" htmlFor="product-stock">Stock quantity</label>
+          <div className="products-card product-detail-section navy-panel">
+            <p className="navy-panel-caption">Available to sell</p>
+            <p className={`navy-panel-total${stockLevel <= threshold ? ' navy-panel-alert' : ''}`}>
+              {stockLevel.toLocaleString('en-US')}
+              <span className="navy-panel-unit"> {stockLevel === 1 ? 'unit' : 'units'}</span>
+            </p>
+            <div className="navy-panel-gauge" aria-hidden="true">
+              <span className="navy-panel-gauge-fill" style={{ width: `${Math.min(stockLevel / gaugeMax, 1) * 100}%` }} />
+              <span className="navy-panel-gauge-mark" style={{ left: `${(threshold / gaugeMax) * 100}%` }} />
+            </div>
+            <p className="navy-panel-note">
+              {stockLevel <= 0
+                ? 'Out of stock: hidden from checkout until restocked.'
+                : stockLevel <= threshold
+                  ? `Low stock: at or below the ${threshold}-unit mark.`
+                  : `Low-stock mark at ${threshold} ${threshold === 1 ? 'unit' : 'units'}.`}
+            </p>
+            <label className="navy-panel-caption" htmlFor="product-stock">
+              Set stock quantity
+            </label>
             <input
               id="product-stock"
               type="number"
               min={0}
+              className="navy-panel-input"
               value={stockInput}
               onChange={(e) => setStockInput(e.target.value)}
               onBlur={() => {

@@ -1,4 +1,5 @@
 import { useEffect, useState, type SyntheticEvent } from 'react'
+import GradScale from '../../components/GradScale'
 
 export const API_BASE_URL = 'http://localhost:5656'
 
@@ -51,6 +52,7 @@ export interface AdminInventoryRow {
   available: number
   onHand: number
   incoming: number
+  lowStockThreshold?: number
 }
 
 export function resolveImageUrl(url: string | null) {
@@ -167,5 +169,29 @@ export function Pagination({
         </button>
       </div>
     </div>
+  )
+}
+
+/** Stock read off a graduated scale; the crimson mark is the low-stock threshold. */
+export function StockLevel({ qty, threshold, index = 0 }: { qty: number; threshold: number; index?: number }) {
+  const safeThreshold = Math.max(threshold ?? 0, 0)
+  const max = Math.max(safeThreshold * 4, 20)
+  const low = qty <= safeThreshold
+  const label = qty <= 0 ? 'Out of stock' : `${qty} in stock`
+
+  return (
+    <span className={`stock-level${low ? ' stock-level-low' : ''}`}>
+      <span className="stock-level-label">{label}</span>
+      <GradScale
+        fill={qty / max}
+        majors={4}
+        minorsPerMajor={4}
+        tone={low ? 'crimson' : 'navy'}
+        marker={safeThreshold > 0 ? safeThreshold / max : undefined}
+        width={96}
+        index={index}
+        label={`${label}${safeThreshold > 0 ? `, low-stock mark at ${safeThreshold}` : ''}`}
+      />
+    </span>
   )
 }

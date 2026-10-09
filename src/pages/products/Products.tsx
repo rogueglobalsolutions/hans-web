@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ProductDetail from './ProductDetail'
+import LedgerBand from '../../components/LedgerBand'
 import {
   API_BASE_URL,
   IconClose,
@@ -7,6 +9,7 @@ import {
   IconSearch,
   IconTrash,
   Pagination,
+  StockLevel,
   VISIBILITY_STATUS_LABEL,
   authHeaders,
   hideBrokenImage,
@@ -467,6 +470,26 @@ function Products({ token }: ProductsProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const { search, setSearch, debouncedSearch, page, setPage } = usePagedSearch()
+  const navigate = useNavigate()
+  const [health, setHealth] = useState<{ healthy: number; low: number; out: number } | null>(null)
+
+  // Stock health for the band comes from the inventory feed, which covers every product.
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${API_BASE_URL}/api/admin/commerce/inventory`, { headers: authHeaders(token) })
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled || !json.success) return
+        const rows: { available: number; lowStockThreshold?: number }[] = json.data ?? []
+        const out = rows.filter((r) => r.available <= 0).length
+        const low = rows.filter((r) => r.available > 0 && r.available <= (r.lowStockThreshold ?? 5)).length
+        setHealth({ healthy: rows.length - out - low, low, out })
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   useEffect(() => {
     let cancelled = false
@@ -517,6 +540,35 @@ function Products({ token }: ProductsProps) {
 
   return (
     <>
+      <div className="dash-content-header">
+        <h1>Products</h1>
+        {!loading && !error && (
+          <span className="dash-count">
+            {total.toLocaleString('en-US')} {total === 1 ? 'product' : 'products'}
+          </span>
+        )}
+      </div>
+
+      <LedgerBand
+        caption="Stock health"
+        total={health ? health.healthy + health.low + health.out : 0}
+        totalLabel="products"
+        loading={!health}
+        segments={[
+          { key: 'healthy', label: 'In stock', value: health?.healthy ?? 0, color: '#ffffff' },
+          { key: 'low', label: 'Low stock', value: health?.low ?? 0, color: '#f3c77a' },
+          { key: 'out', label: 'Out of stock', value: health?.out ?? 0, color: '#e8566d' },
+        ]}
+        flags={[
+          {
+            key: 'review',
+            label: 'Review in Inventory',
+            value: (health?.low ?? 0) + (health?.out ?? 0),
+            onClick: () => navigate('/products/inventory', { state: { stockFilter: (health?.out ?? 0) > 0 ? 'out' : 'low' } }),
+          },
+        ]}
+      />
+
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -541,7 +593,7 @@ function Products({ token }: ProductsProps) {
           <div className="products-empty">No products found.</div>
         ) : (
           <div className="products-table-wrap">
-            <table className="products-table">
+            <table className="products-table products-list-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -552,7 +604,7 @@ function Products({ token }: ProductsProps) {
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => {
+                {products.map((product, index) => {
                   const image = resolveImageUrl(product.imageUrl)
                   return (
                     <tr key={product.id} className="products-row-clickable" onClick={() => setSelectedId(product.id)}>
@@ -569,7 +621,9 @@ function Products({ token }: ProductsProps) {
                           {VISIBILITY_STATUS_LABEL[product.visibilityStatus]}
                         </span>
                       </td>
-                      <td>{product.stockQty} in stock</td>
+                      <td>
+                        <StockLevel qty={product.stockQty} threshold={product.lowStockThreshold} index={index} />
+                      </td>
                       <td>{product.category || '—'}</td>
                       <td>{product.vendor || '—'}</td>
                     </tr>

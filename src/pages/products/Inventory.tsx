@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   API_BASE_URL,
   IconProductPlaceholder,
   IconSearch,
+  StockLevel,
   authHeaders,
   hideBrokenImage,
   resolveImageUrl,
   type AdminInventoryRow,
 } from './shared'
+import LedgerBand from '../../components/LedgerBand'
 import './Products.css'
+
+type StockFilter = 'all' | 'low' | 'out'
+
+const DEFAULT_LOW_STOCK = 5
+const thresholdOf = (row: AdminInventoryRow) => row.lowStockThreshold ?? DEFAULT_LOW_STOCK
+const isOut = (row: AdminInventoryRow) => row.available <= 0
+const isLow = (row: AdminInventoryRow) => !isOut(row) && row.available <= thresholdOf(row)
 
 interface InventoryProps {
   token: string
@@ -78,6 +88,10 @@ function Inventory({ token }: InventoryProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const location = useLocation()
+  const [stockFilter, setStockFilter] = useState<StockFilter>(
+    () => (location.state as { stockFilter?: StockFilter } | null)?.stockFilter ?? 'all',
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -107,10 +121,50 @@ function Inventory({ token }: InventoryProps) {
   }, [token])
 
   const query = search.trim().toLowerCase()
-  const filtered = query ? rows.filter((r) => r.name.toLowerCase().includes(query)) : rows
+  const filtered = rows.filter(
+    (r) =>
+      (!query || r.name.toLowerCase().includes(query)) &&
+      (stockFilter === 'all' || (stockFilter === 'low' ? isLow(r) : isOut(r))),
+  )
+  const totals = rows.reduce(
+    (acc, r) => ({
+      available: acc.available + Math.max(r.available, 0),
+      committed: acc.committed + r.committed,
+      onHand: acc.onHand + r.onHand,
+      low: acc.low + (isLow(r) ? 1 : 0),
+      out: acc.out + (isOut(r) ? 1 : 0),
+    }),
+    { available: 0, committed: 0, onHand: 0, low: 0, out: 0 },
+  )
+  const toggleFilter = (next: StockFilter) => setStockFilter((current) => (current === next ? 'all' : next))
 
   return (
     <>
+      <div className="dash-content-header">
+        <h1>Inventory</h1>
+        {!loading && !error && (
+          <span className="dash-count">
+            {(rows.length).toLocaleString('en-US')} {(rows.length) === 1 ? 'product' : 'products'}
+          </span>
+        )}
+      </div>
+
+      {!error && (
+        <LedgerBand
+          caption="Units on hand"
+          total={totals.onHand}
+          loading={loading}
+          segments={[
+            { key: 'available', label: 'Available', value: totals.available, color: '#ffffff' },
+            { key: 'committed', label: 'Committed to paid orders', value: totals.committed, color: '#8ea7d6' },
+          ]}
+          flags={[
+            { key: 'low', label: 'Low stock', value: totals.low, active: stockFilter === 'low', onClick: () => toggleFilter('low') },
+            { key: 'out', label: 'Out of stock', value: totals.out, active: stockFilter === 'out', onClick: () => toggleFilter('out') },
+          ]}
+        />
+      )}
+
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -129,24 +183,31 @@ function Inventory({ token }: InventoryProps) {
         ) : error ? (
           <div className="products-empty products-error">{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="products-empty">No products found.</div>
+          <div className="products-empty">
+            {stockFilter === 'all' ? 'No products found.' : `No ${stockFilter === 'low' ? 'low-stock' : 'out-of-stock'} products.`}
+            {stockFilter !== 'all' && (
+              <button type="button" className="orders-label-link inventory-clear-filter" onClick={() => setStockFilter('all')}>
+                Show all products
+              </button>
+            )}
+          </div>
         ) : (
           <div className="products-table-wrap">
-            <table className="products-table">
+            <table className="products-table inventory-table">
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th>Unavailable</th>
-                  <th>Committed</th>
                   <th>Available</th>
+                  <th>Committed</th>
+                  <th>Unavailable</th>
                   <th>On hand</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row) => {
+                {filtered.map((row, index) => {
                   const image = resolveImageUrl(row.imageUrl)
                   return (
-                    <tr key={row.id}>
+                    <tr key={row.id} className={isOut(row) ? 'inventory-row-out' : undefined}>
                       <td>
                         <div className="products-cell-product">
                           <span className="products-thumb">
@@ -155,9 +216,13 @@ function Inventory({ token }: InventoryProps) {
                           <span>{row.name}</span>
                         </div>
                       </td>
-                      <td>{row.unavailable}</td>
-                      <td>{row.committed}</td>
-                      <td>{row.available}</td>
+                      <td>
+                        <StockLevel qty={row.available} threshold={thresholdOf(row)} index={index} />
+                      </td>
+                      <td className={`inventory-num${row.committed > 0 ? ' inventory-num-committed' : ''}`}>
+                        {row.committed}
+                      </td>
+                      <td className="inventory-num">{row.unavailable}</td>
                       <td>
                         <OnHandCell
                           token={token}

@@ -67,9 +67,14 @@ function Contest({ entries, loading, error, tabs }: ContestProps) {
       ) : error ? (
         <div className="products-empty products-error">{error}</div>
       ) : sorted.length === 0 ? (
-        <div className="products-empty">
-          {entries.length === 0 ? 'No contest entries yet.' : 'No entries match your search.'}
-        </div>
+        entries.length === 0 ? (
+          <div className="empty-state empty-state-inline">
+            <p className="empty-state-title">No contest entries yet</p>
+            <p className="empty-state-text">Before &amp; After submissions from the app appear here for review.</p>
+          </div>
+        ) : (
+          <div className="products-empty">No entries match your search.</div>
+        )
       ) : (
         <div className="products-table-wrap">
           <table className="products-table">

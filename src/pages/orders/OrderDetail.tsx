@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   API_BASE_URL,
   IconArrowLeft,
-  STATUS_COLORS,
-  STATUS_LABEL,
+  StatusScale,
   authHeaders,
   formatCurrency,
   formatDate,
@@ -294,7 +293,6 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
     )
   }
 
-  const statusColors = STATUS_COLORS[order.status] ?? { bg: '#eef0f2', color: '#525b68' }
   const canRefund = ['paid', 'partially_refunded'].includes(order.paymentStatus)
   const canCancel = order.status !== 'cancelled' && order.status !== 'delivered'
   const latestLabel = order.shippingLabels[0]
@@ -307,11 +305,11 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
             <IconArrowLeft />
             Orders
           </button>
-          <h1>{order.orderNumber}</h1>
+          <h1 className="num">{order.orderNumber}</h1>
         </div>
-        <span className="orders-status" style={{ background: statusColors.bg, color: statusColors.color }}>
-          {STATUS_LABEL[order.status] ?? order.status}
-        </span>
+        <div className="orders-detail-header-scale">
+          <StatusScale status={order.status} cancellationRequested={order.cancellationRequested} width={280} showStations />
+        </div>
       </div>
 
       {actionError && <div className="orders-banner-error">{actionError}</div>}
@@ -380,12 +378,12 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
 
         <div className="products-card orders-detail-card orders-detail-card-wide">
           <h2>Items</h2>
-          <table className="products-table">
+          <table className="products-table orders-items-table">
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Qty</th>
-                <th>Total</th>
+                <th className="orders-col-qty">Qty</th>
+                <th className="orders-col-money">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -395,8 +393,8 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
                     {item.productName}
                     {item.variantLabel ? <span className="orders-variant-label"> · {item.variantLabel}</span> : null}
                   </td>
-                  <td>{item.quantity}</td>
-                  <td>{formatCurrency(item.lineTotal, order.currency)}</td>
+                  <td className="orders-col-qty num">{item.quantity}</td>
+                  <td className="orders-col-money num">{formatCurrency(item.lineTotal, order.currency)}</td>
                 </tr>
               ))}
             </tbody>
@@ -405,15 +403,23 @@ function OrderDetail({ id, token, onBack, onChanged }: OrderDetailProps) {
 
         <div className="products-card orders-detail-card">
           <h2>Payment Summary</h2>
-          <dl className="orders-kv">
+          <dl className="orders-kv orders-kv-money">
             <dt>Subtotal</dt>
-            <dd>{formatCurrency(order.subtotal, order.currency)}</dd>
+            <dd className="num">{formatCurrency(order.subtotal, order.currency)}</dd>
             <dt>Shipping</dt>
-            <dd>{formatCurrency(order.shippingFee, order.currency)}</dd>
+            <dd className="num">{formatCurrency(order.shippingFee, order.currency)}</dd>
             <dt>Tax</dt>
-            <dd>{formatCurrency(order.tax, order.currency)}</dd>
-            <dt>Total</dt>
-            <dd><strong>{formatCurrency(order.totalAmount, order.currency)}</strong></dd>
+            <dd className="num">{formatCurrency(order.tax, order.currency)}</dd>
+            <dt className="orders-kv-total">Total</dt>
+            <dd className="orders-kv-total num">{formatCurrency(order.totalAmount, order.currency)}</dd>
+          </dl>
+        </div>
+
+        <div className="products-card orders-detail-card">
+          <h2>Fulfillment</h2>
+          <dl className="orders-kv">
+            <dt>Payment</dt>
+            <dd>{titleCase(order.paymentStatus)}</dd>
             <dt>Verification</dt>
             <dd>{titleCase(order.verificationStatus)}</dd>
             <dt>Fulfillment</dt>

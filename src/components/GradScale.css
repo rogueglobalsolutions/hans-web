@@ -1,0 +1,76 @@
+.grad-scale {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+  --grad-color: var(--navy);
+}
+
+.grad-crimson {
+  --grad-color: var(--crimson);
+}
+
+.grad-good {
+  --grad-color: var(--good);
+}
+
+.grad-warn {
+  --grad-color: var(--warn);
+}
+
+.grad-muted {
+  --grad-color: var(--ink-4);
+}
+
+.grad-tick {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.grad-tick-major {
+  stroke: var(--ink-4);
+}
+
+.grad-tick-reached {
+  stroke: var(--grad-color);
+  opacity: 0.55;
+}
+
+.grad-tick-major.grad-tick-reached {
+  opacity: 1;
+}
+
+.grad-track {
+  fill: var(--rule);
+}
+
+.grad-struck .grad-track {
+  fill: var(--crimson-tint);
+}
+
+.grad-fill {
+  fill: var(--grad-color);
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: grad-draw 720ms var(--ease-out) both;
+  animation-delay: calc(var(--grad-i, 0) * 28ms + 80ms);
+}
+
+.grad-strike {
+  stroke: var(--crimson);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  shape-rendering: crispEdges;
+}
+
+.grad-marker {
+  stroke: var(--crimson);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+@keyframes grad-draw {
+  from {
+    transform: scaleX(0);
+  }
+}

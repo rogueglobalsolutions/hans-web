@@ -6,6 +6,8 @@ import {
   IconTrash,
   authHeaders,
 } from '../products/shared'
+import GradScale from '../../components/GradScale'
+import LedgerBand from '../../components/LedgerBand'
 import '../products/Products.css'
 
 interface DiscountsProps {
@@ -300,9 +302,36 @@ function Discounts({ token }: DiscountsProps) {
 
   const query = search.trim().toLowerCase()
   const filtered = query ? discounts.filter((d) => d.code.toLowerCase().includes(query)) : discounts
+  const expiredCount = discounts.filter((d) => isExpired(d.expiresAt)).length
+  const activeCount = discounts.filter((d) => d.isActive && !isExpired(d.expiresAt)).length
+  const redemptions = discounts.reduce((n, d) => n + d.usedCount, 0)
 
   return (
     <>
+      <div className="dash-content-header">
+        <h1>Discounts</h1>
+        {!loading && !error && (
+          <span className="dash-count">
+            {(discounts.length).toLocaleString('en-US')} {(discounts.length) === 1 ? 'code' : 'codes'}
+          </span>
+        )}
+      </div>
+
+      {!error && (
+        <LedgerBand
+          caption="Discount codes"
+          total={discounts.length}
+          totalLabel={discounts.length === 1 ? 'code' : 'codes'}
+          loading={loading}
+          segments={[
+            { key: 'active', label: 'Active', value: activeCount, color: '#7fd1a8' },
+            { key: 'inactive', label: 'Paused', value: discounts.length - activeCount - expiredCount, color: '#8ea7d6' },
+            { key: 'expired', label: 'Expired', value: expiredCount, color: 'rgba(255, 255, 255, 0.3)' },
+          ]}
+          flags={[{ key: 'redemptions', label: 'Times redeemed', value: redemptions, tone: 'info' }]}
+        />
+      )}
+
       <div className="products-card products-list-card">
         <div className="products-toolbar">
           <div className="products-search">
@@ -356,8 +385,24 @@ function Discounts({ token }: DiscountsProps) {
                         {expired && <span className="products-cell-sub">Expired</span>}
                       </td>
                       <td>
-                        {discount.usedCount}
-                        {discount.maxUses ? ` / ${discount.maxUses}` : ''}
+                        <span className="seat-scale">
+                          <span className="seat-scale-label">
+                            {discount.usedCount}
+                            {discount.maxUses ? ` / ${discount.maxUses}` : ' used'}
+                          </span>
+                          {discount.maxUses ? (
+                            <GradScale
+                              fill={discount.usedCount / discount.maxUses}
+                              majors={4}
+                              minorsPerMajor={2}
+                              tone={discount.usedCount >= discount.maxUses ? 'crimson' : 'navy'}
+                              width={88}
+                              label={`${discount.usedCount} of ${discount.maxUses} uses`}
+                            />
+                          ) : (
+                            <span className="products-cell-sub">No limit</span>
+                          )}
+                        </span>
                       </td>
                       <td>
                         <span

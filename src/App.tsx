@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import Login, { type AuthUser } from './pages/auth/Login'
 import Dashboard from './pages/dashboard/Dashboard'
-import './App.css'
 
 const STORAGE_KEY = 'hans_admin_auth'
 

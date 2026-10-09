@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactElement } from 'react'
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import type { AuthUser } from '../auth/Login'
 import Orders from '../orders/Orders'
+import Drafts from '../orders/drafts/Drafts'
+import DraftEditor from '../orders/drafts/DraftEditor'
 import Products from '../products/Products'
 import Collections from '../products/Collections'
 import Inventory from '../products/Inventory'
@@ -11,6 +13,7 @@ import TrainingParticipants from '../customers/TrainingParticipants'
 import ContestDetail from '../customers/ContestDetail'
 import Discounts from '../discounts/Discounts'
 import hansLogo from '../../assets/hans-logo.png'
+import GradScale from '../../components/GradScale'
 import './Dashboard.css'
 
 interface DashboardProps {
@@ -206,6 +209,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Analytics', path: '/analytics', icon: <IconAnalytics /> },
 ]
 
+// Sales reps only prepare draft orders for medical professionals.
+const SALES_REP_NAV: NavItem[] = [{ label: 'Draft orders', path: '/orders/drafts', icon: <IconOrders /> }]
+
 const SESSIONS_CURRENT = [30, 45, 40, 55, 90, 130, 95, 70, 55, 50, 65, 100, 150, 115, 80, 70, 65, 95, 190, 140, 155, 210, 130, 105]
 const SESSIONS_PREVIOUS = [50, 55, 60, 58, 65, 70, 80, 75, 70, 68, 72, 78, 85, 90, 95, 88, 80, 85, 100, 110, 105, 95, 90, 85]
 
@@ -219,38 +225,50 @@ function buildPath(values: number[], width: number, height: number) {
 
 function SessionsChart() {
   const width = 640
-  const height = 140
+  const height = 160
+  const points = SESSIONS_CURRENT.length
 
   return (
     <div className="dash-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="dash-chart-svg">
+      <div className="dash-chart-head">
+        <h2>Sessions over time</h2>
+        <div className="dash-chart-legend">
+          <span className="dash-legend-item">
+            <span className="dash-legend-swatch current" />
+            Sep 6&ndash;Oct 6, 2025
+          </span>
+          <span className="dash-legend-item">
+            <span className="dash-legend-swatch previous" />
+            Aug 6&ndash;Sep 5, 2025
+          </span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="dash-chart-svg" aria-hidden="true">
         <line x1="0" y1={height * 0.25} x2={width} y2={height * 0.25} className="dash-chart-grid" />
         <line x1="0" y1={height * 0.5} x2={width} y2={height * 0.5} className="dash-chart-grid" />
         <line x1="0" y1={height * 0.75} x2={width} y2={height * 0.75} className="dash-chart-grid" />
         <path d={buildPath(SESSIONS_PREVIOUS, width, height)} className="dash-chart-line-previous" fill="none" />
+        <path d={`${buildPath(SESSIONS_CURRENT, width, height)} L${width},${height} L0,${height} Z`} className="dash-chart-area" />
         <path d={buildPath(SESSIONS_CURRENT, width, height)} className="dash-chart-line-current" fill="none" />
       </svg>
+      <div className="dash-chart-ticks" aria-hidden="true">
+        {Array.from({ length: points }, (_, i) => (
+          <span key={i} className={i % 8 === 0 || i === points - 1 ? 'major' : ''} />
+        ))}
+      </div>
       <div className="dash-chart-axis">
         <span>Sep 6</span>
         <span>Sep 15</span>
         <span>Sep 24</span>
         <span>Oct 3</span>
       </div>
-      <div className="dash-chart-legend">
-        <span className="dash-legend-item">
-          <span className="dash-legend-dot current" />
-          Sep 6&ndash;Oct 6, 2025
-        </span>
-        <span className="dash-legend-item">
-          <span className="dash-legend-dot previous" />
-          Aug 6&ndash;Sep 5, 2025
-        </span>
-      </div>
     </div>
   )
 }
 
 const WIDE_CONTENT_PATHS = new Set([
+  '/orders',
+  '/orders/drafts',
   '/products',
   '/products/collections',
   '/products/inventory',
@@ -266,9 +284,16 @@ function isWideContentPath(pathname: string) {
   return pathname.startsWith('/customers/segments/')
 }
 
-function findActiveItem(pathname: string) {
-  return NAV_ITEMS.find((item) => item.path !== '/' && (pathname === item.path || pathname.startsWith(`${item.path}/`)))
+function findActiveItem(pathname: string, items: NavItem[] = NAV_ITEMS) {
+  return items.find((item) => item.path !== '/' && (pathname === item.path || pathname.startsWith(`${item.path}/`)))
 }
+
+const HOME_STATS = [
+  { label: 'Sessions', value: '851', delta: '36%' },
+  { label: 'Total sales', value: 'AED 5,910' },
+  { label: 'Orders', value: '3' },
+  { label: 'Conversion rate', value: '0.35%' },
+]
 
 function HomeContent() {
   return (
@@ -276,6 +301,9 @@ function HomeContent() {
       <div className="dash-content-header">
         <h1>Home</h1>
         <div className="dash-filters">
+          <span className="dash-sample-tag" title="These figures are placeholders, not live store data">
+            Sample data
+          </span>
           <button type="button" className="dash-filter-btn">Last 30 days</button>
           <button type="button" className="dash-filter-btn">All channels</button>
           <span className="dash-live">
@@ -285,37 +313,39 @@ function HomeContent() {
         </div>
       </div>
 
-      <div className="dash-stats-card">
+      <section className="dash-stats-card">
         <div className="dash-stats-row">
-          <div className="dash-stat">
-            <p className="dash-stat-label">Sessions</p>
-            <p className="dash-stat-value">
-              851 <span className="dash-stat-delta up">&#9650; 36%</span>
-            </p>
-          </div>
-          <div className="dash-stat">
-            <p className="dash-stat-label">Total sales</p>
-            <p className="dash-stat-value">AED 5,910</p>
-          </div>
-          <div className="dash-stat">
-            <p className="dash-stat-label">Orders</p>
-            <p className="dash-stat-value">3</p>
-          </div>
-          <div className="dash-stat">
-            <p className="dash-stat-label">Conversion rate</p>
-            <p className="dash-stat-value">0.35%</p>
-          </div>
+          {HOME_STATS.map((stat) => (
+            <div key={stat.label} className="dash-stat">
+              <p className="dash-stat-label">{stat.label}</p>
+              <p className="dash-stat-value">
+                {stat.value}
+                {stat.delta && (
+                  <span className="dash-stat-delta up">
+                    <svg viewBox="0 0 10 10" aria-hidden="true">
+                      <path d="M5 2 9 8H1Z" fill="currentColor" />
+                    </svg>
+                    {stat.delta}
+                  </span>
+                )}
+              </p>
+            </div>
+          ))}
         </div>
 
         <SessionsChart />
-      </div>
+      </section>
 
-      <div className="dash-tasks">
+      <section className="dash-guides">
+        <h2 className="dash-section-title">Guides</h2>
         <div className="dash-task-card">
           <div className="dash-task-copy">
-            <p className="dash-task-progress">1 of 4 tasks complete</p>
             <h3>Improve your conversion rate</h3>
             <p>Increase the percentage of visitors who purchase something from your store.</p>
+            <div className="dash-task-progress">
+              <GradScale fill={1 / 4} majors={4} minorsPerMajor={2} width={120} label="1 of 4 tasks complete" />
+              <span>1 of 4 tasks complete</span>
+            </div>
           </div>
           <button type="button" className="dash-task-cta">Resume guide</button>
         </div>
@@ -327,7 +357,7 @@ function HomeContent() {
           </div>
           <button type="button" className="dash-task-cta">View tasks</button>
         </div>
-      </div>
+      </section>
     </>
   )
 }
@@ -339,10 +369,20 @@ function PlaceholderContent() {
   const title = activeChild?.label ?? activeItem?.label ?? 'Not found'
 
   return (
-    <div className="dash-placeholder">
-      <h1>{title}</h1>
-      <p>This section is coming soon.</p>
-    </div>
+    <>
+      <div className="dash-content-header">
+        <h1>{title}</h1>
+      </div>
+      <div className="empty-state">
+        <span className="empty-state-icon" aria-hidden="true">
+          {activeItem?.icon ?? <IconHome />}
+        </span>
+        <p className="empty-state-title">{title} is coming soon</p>
+        <p className="empty-state-text">
+          This part of the Hans Biomed admin is not built yet. Everything else in the menu works today.
+        </p>
+      </div>
+    </>
   )
 }
 
@@ -350,8 +390,10 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const isSalesRep = user.role === 'SALES_REP'
+  const navItems = isSalesRep ? SALES_REP_NAV : NAV_ITEMS
 
-  const activeItem = useMemo(() => findActiveItem(location.pathname), [location.pathname])
+  const activeItem = useMemo(() => findActiveItem(location.pathname, navItems), [location.pathname, navItems])
   const activeChild = useMemo(
     () =>
       activeItem?.children?.find(
@@ -362,7 +404,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
   const isWideContent = isWideContentPath(location.pathname)
 
   const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
-    const current = findActiveItem(location.pathname)
+    const current = findActiveItem(location.pathname, navItems)
     return current?.children ? new Set([current.label]) : new Set()
   })
 
@@ -396,7 +438,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
         </div>
 
         <nav className="dash-nav">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <div key={item.label} className="dash-nav-group">
               <button
                 type="button"
@@ -405,7 +447,11 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
               >
                 <span className="dash-nav-icon">{item.icon}</span>
                 <span className="dash-nav-label">{item.label}</span>
-                {item.badge && <span className="dash-nav-badge">{item.badge}</span>}
+                {item.badge && (
+                  <span className="dash-nav-badge" aria-label={`${item.badge} need attention`}>
+                    {item.badge}
+                  </span>
+                )}
                 {item.children && (
                   <span className={`dash-nav-chevron ${openMenus.has(item.label) ? 'open' : ''}`}>
                     <IconChevron />
@@ -431,6 +477,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
           ))}
         </nav>
 
+        {!isSalesRep && (
+        <>
         <div className="dash-sidebar-section">
           <p className="dash-sidebar-heading">Sales channels</p>
           <button
@@ -467,6 +515,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
             <span className="dash-nav-label">Settings</span>
           </button>
         </div>
+        </>
+        )}
       </aside>
 
       <div className="dash-main">
@@ -481,6 +531,8 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
               <button
                 type="button"
                 className="dash-avatar"
+                aria-label="Account menu"
+                aria-expanded={userMenuOpen}
                 onClick={() => setUserMenuOpen((open) => !open)}
               >
                 {initials}
@@ -489,7 +541,10 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
               {userMenuOpen && (
                 <div className="dash-user-dropdown">
                   <p className="dash-user-name">{user.fullName}</p>
-                  <p className="dash-user-email">{user.email}</p>
+                  <p className="dash-user-email">
+                    {user.email}
+                    {isSalesRep && <span className="dash-user-role">Sales representative</span>}
+                  </p>
                   <button type="button" className="dash-logout-btn" onClick={onLogout}>
                     Log out
                   </button>
@@ -500,8 +555,17 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
         </header>
 
         <main className={`dash-content${isWideContent ? ' dash-content-wide' : ''}`}>
+          {isSalesRep ? (
+            <Routes>
+              <Route path="/orders/drafts" element={<Drafts token={token} canSeeAll={false} />} />
+              <Route path="/orders/drafts/:draftId" element={<DraftEditor token={token} canSeeOrders={false} />} />
+              <Route path="*" element={<Navigate to="/orders/drafts" replace />} />
+            </Routes>
+          ) : (
           <Routes>
             <Route path="/" element={<HomeContent />} />
+            <Route path="/orders/drafts" element={<Drafts token={token} canSeeAll />} />
+            <Route path="/orders/drafts/:draftId" element={<DraftEditor token={token} canSeeOrders />} />
             <Route path="/orders" element={<Orders token={token} />} />
             <Route path="/products" element={<Products token={token} />} />
             <Route path="/products/collections" element={<Collections token={token} />} />
@@ -514,6 +578,7 @@ function Dashboard({ user, token, onLogout }: DashboardProps) {
             <Route path="/discounts" element={<Discounts token={token} />} />
             <Route path="*" element={<PlaceholderContent />} />
           </Routes>
+          )}
         </main>
       </div>
     </div>

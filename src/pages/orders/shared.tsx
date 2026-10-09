@@ -1,3 +1,5 @@
+import GradScale from '../../components/GradScale'
+
 export { API_BASE_URL, authHeaders, resolveImageUrl, usePagedSearch, Pagination, IconSearch, IconArrowLeft } from '../products/shared'
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
@@ -78,14 +80,51 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: 'Cancelled',
 }
 
-export const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending: { bg: '#fef3c7', color: '#b45309' },
-  processing: { bg: '#dbeafe', color: '#1d4ed8' },
-  shipped: { bg: '#e0f2fe', color: '#0369a1' },
-  delivered: { bg: '#dcfce7', color: '#15803d' },
-  cancelled: { bg: '#fee2e2', color: '#b91c1c' },
-  refunded: { bg: '#ede9fe', color: '#6d28d9' },
-  partially_refunded: { bg: '#ede9fe', color: '#6d28d9' },
+const LIFECYCLE: OrderStatus[] = ['pending', 'processing', 'shipped', 'delivered']
+
+/** Order lifecycle read off a graduated scale: one major mark per station. */
+export function StatusScale({
+  status,
+  cancellationRequested = false,
+  index = 0,
+  width = 96,
+  showStations = false,
+}: {
+  status: OrderStatus
+  cancellationRequested?: boolean
+  index?: number
+  width?: number
+  showStations?: boolean
+}) {
+  const station = LIFECYCLE.indexOf(status)
+  const cancelled = status === 'cancelled'
+  const label = cancellationRequested ? 'Cancellation requested' : (STATUS_LABEL[status] ?? status)
+  const tone = cancellationRequested ? 'crimson' : 'navy'
+
+  return (
+    <span className={`status-scale status-scale-${cancellationRequested ? 'alert' : status}`}>
+      {(!showStations || cancelled || cancellationRequested) && <span className="status-scale-label">{label}</span>}
+      <GradScale
+        fill={cancelled ? 0 : Math.max(station, 0) / (LIFECYCLE.length - 1)}
+        majors={LIFECYCLE.length - 1}
+        minorsPerMajor={3}
+        tone={tone}
+        struck={cancelled}
+        width={width}
+        index={index}
+        label={cancelled ? 'Cancelled' : `Step ${station + 1} of ${LIFECYCLE.length}: ${label}`}
+      />
+      {showStations && (
+        <span className="status-scale-stations" style={{ width }} aria-hidden="true">
+          {LIFECYCLE.map((step, i) => (
+            <span key={step} className={!cancelled && i <= station ? 'reached' : ''}>
+              {STATUS_LABEL[step].replace(' Payment', '')}
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  )
 }
 
 export function formatCurrency(value: number, currency = 'USD') {

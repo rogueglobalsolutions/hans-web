@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { API_BASE_URL, IconSearch, authHeaders } from '../products/shared'
 import Contest, { type AdminContestEntry } from './Contest'
+import GradScale from '../../components/GradScale'
+import LedgerBand from '../../components/LedgerBand'
 import '../products/Products.css'
 
 interface SegmentsProps {
@@ -29,6 +31,25 @@ interface TrainingProgramsProps {
 function formatDate(value: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function SeatScale({ filled, capacity }: { filled: number; capacity: number }) {
+  const full = capacity > 0 && filled >= capacity
+  return (
+    <span className="seat-scale">
+      <span className={`seat-scale-label${full ? ' seat-scale-full' : ''}`}>
+        {filled} / {capacity} {full ? 'full' : 'seats'}
+      </span>
+      <GradScale
+        fill={capacity > 0 ? filled / capacity : 0}
+        majors={Math.max(1, Math.min(capacity, 8))}
+        minorsPerMajor={0}
+        tone={full ? 'good' : 'navy'}
+        width={96}
+        label={`${filled} of ${capacity} seats filled`}
+      />
+    </span>
+  )
 }
 
 function TrainingPrograms({ trainings, loading, error, tabs }: TrainingProgramsProps) {
@@ -85,7 +106,10 @@ function TrainingPrograms({ trainings, loading, error, tabs }: TrainingProgramsP
                   <td>{training.location || '—'}</td>
                   <td>{formatDate(training.scheduledAt)}</td>
                   <td>
-                    {training._count.enrollments} / {training.maxEnrollees + training.maxObservers}
+                    <SeatScale
+                      filled={training._count.enrollments}
+                      capacity={training.maxEnrollees + training.maxObservers}
+                    />
                   </td>
                 </tr>
               ))}
@@ -187,6 +211,44 @@ function Segments({ token }: SegmentsProps) {
 
   return (
     <>
+      <div className="dash-content-header">
+        <h1>Segments</h1>
+      </div>
+
+      {!isContestTab && !trainingsError && (
+        <LedgerBand
+          caption="Seats across training programs"
+          total={trainings.reduce((n, t) => n + t.maxEnrollees + t.maxObservers, 0)}
+          totalLabel="seats"
+          loading={trainingsLoading}
+          segments={[
+            {
+              key: 'filled',
+              label: 'Filled',
+              value: trainings.reduce((n, t) => n + t._count.enrollments, 0),
+              color: '#ffffff',
+            },
+            {
+              key: 'open',
+              label: 'Open',
+              value: trainings.reduce(
+                (n, t) => n + Math.max(t.maxEnrollees + t.maxObservers - t._count.enrollments, 0),
+                0,
+              ),
+              color: 'rgba(255, 255, 255, 0.3)',
+            },
+          ]}
+          flags={[
+            {
+              key: 'programs',
+              label: 'Programs',
+              value: trainings.length,
+              tone: 'info',
+            },
+          ]}
+        />
+      )}
+
       <div className="products-card products-list-card">
         {isContestTab ? (
           <Contest entries={contestEntries} loading={contestLoading} error={contestError} tabs={tabs} />

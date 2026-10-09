@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { API_BASE_URL, IconArrowLeft, authHeaders } from '../products/shared'
+import Avatar from '../../components/Avatar'
+import LedgerBand from '../../components/LedgerBand'
 import '../products/Products.css'
 
 interface TrainingParticipantsProps {
@@ -12,6 +14,9 @@ interface TrainingSummary {
   title: string
   level: string
   scheduledAt: string | null
+  location?: string | null
+  maxEnrollees?: number
+  maxObservers?: number
 }
 
 interface Enrollee {
@@ -110,8 +115,50 @@ function TrainingParticipants({ token }: TrainingParticipantsProps) {
             Segments
           </button>
           <h1>{training?.title ?? 'Training program'}</h1>
+          {training && (
+            <p className="training-meta">
+              {[
+                training.level,
+                training.location,
+                training.scheduledAt
+                  ? new Date(training.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
         </div>
       </div>
+
+      {!error && (
+        <LedgerBand
+          caption="Seats"
+          total={(training?.maxEnrollees ?? 0) + (training?.maxObservers ?? 0)}
+          totalLabel="seats"
+          loading={loading}
+          segments={[
+            {
+              key: 'enrollees',
+              label: 'Enrollees',
+              value: participants.filter((p) => p.type === 'ENROLLEE').length,
+              color: '#ffffff',
+            },
+            {
+              key: 'observers',
+              label: 'Observers',
+              value: participants.filter((p) => p.type === 'OBSERVER').length,
+              color: '#8ea7d6',
+            },
+            {
+              key: 'open',
+              label: 'Open',
+              value: Math.max((training?.maxEnrollees ?? 0) + (training?.maxObservers ?? 0) - participants.length, 0),
+              color: 'rgba(255, 255, 255, 0.3)',
+            },
+          ]}
+        />
+      )}
 
       <div className="products-card products-list-card">
         {loading ? (
@@ -136,9 +183,18 @@ function TrainingParticipants({ token }: TrainingParticipantsProps) {
               <tbody>
                 {participants.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.user.fullName}</td>
+                    <td>
+                      <span className="person-cell">
+                        <Avatar name={p.user.fullName} />
+                        <span className="person-name">{p.user.fullName}</span>
+                      </span>
+                    </td>
                     <td>{p.user.email}</td>
-                    <td>{p.type === 'ENROLLEE' ? 'Enrollee' : 'Observer'}</td>
+                    <td>
+                      <span className={`participant-type participant-${p.type.toLowerCase()}`}>
+                        {p.type === 'ENROLLEE' ? 'Enrollee' : 'Observer'}
+                      </span>
+                    </td>
                     <td>{p.salesRep?.fullName || '—'}</td>
                     <td>{p.orderCount ?? '—'}</td>
                     <td>{p.amountSpent != null ? formatCurrency(p.amountSpent) : '—'}</td>
